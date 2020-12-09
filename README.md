@@ -141,3 +141,33 @@ scrape_configs:
 | adguard_query_types               | This represent the types of DNS queries                              |
 | running                           | Is Adguard running?                                                  |
 | protection_enabled                | Is the protection enabled?                                           |
+
+## Systemd file 
+
+### Ubuntu
+
+One can enable the program to work at startup by writing a systemd file. You can put this file in /etc/systemd/system/adguard-home.service
+
+```
+[Unit]
+Description=AdGuard-Exporter
+After=syslog.target network-online.target
+Requires=AdGuardHome.Service
+
+[Service]
+ExecStart=/opt/adguard_exporter/adguard_exporter-linux-arm -adguard_protocol http -adguard_hostname <hostname> -adguard_username <username> -adguard_password <password> -log_limit 5000
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then do this command to start the service:
+```
+$ sudo systemctl start adguard-home.service
+```
+To enable the service at startup:
+```
+$ sudo systemctl enable adguard-home.service
+```
