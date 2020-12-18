@@ -22,11 +22,13 @@ You can download the latest version of the binary built for your architecture he
 
 * Architecture **i386** [
 [Darwin](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-darwin-386) /
+[FreeBSD](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-freebsd-386) /
 [Linux](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-linux-386) /
 [Windows](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-windows-386.exe)
 ]
 * Architecture **amd64** [
 [Darwin](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-darwin-amd64) /
+[FreeBSD](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-freebsd-amd64) /
 [Linux](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-linux-amd64) /
 [Windows](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-windows-amd64.exe)
 ]
