@@ -2,3 +2,4 @@ vendor
 debug
 adguard_exporter
 .git/
+.env

@@ -1,5 +1,6 @@
 # AdguardHome Prometheus Exporter
 
+![Build/Push (master)](https://github.com/ebrianne/adguard-exporter/workflows/Build/Push%20(master)/badge.svg?branch=master)
 [![GoDoc](https://godoc.org/github.com/ebrianne/adguard-exporter?status.png)](https://godoc.org/github.com/ebrianne/adguard-exporter)
 [![GoReportCard](https://goreportcard.com/badge/github.com/ebrianne/adguard-exporter)](https://goreportcard.com/report/github.com/ebrianne/adguard-exporter)
 
@@ -54,6 +55,101 @@ $ GO111MODULE=on go mod vendor
 Then, build the binary (here, an example to run on Raspberry PI ARM architecture):
 ```bash
 $ GOOS=linux GOARCH=arm GOARM=7 go build -o adguard_exporter .
+```
+
+## Using Docker
+
+The exporter has been made available as a docker image. You can simply run it by the following command and pass the configuration with environment variables:
+
+```bash
+docker run \
+-e 'adguard_protocol=http' \
+-e 'adguard_hostname=192.168.10.252' \
+-e 'adguard_username=admin' \
+-e 'adguard_password=mypassword' \
+-e 'interval=10s' \
+-e 'log_limit=10000' \
+-e 'server_port=9617' \
+-p 9617:9617 \
+ebrianne/adguard_exporter:latest
+```
+
+If you prefer you can use an .env file where the environment variables are defined and using the command:
+
+```bash
+docker run --env-file=.env -p 9617:9617 \
+ebrianne/adguard_exporter:latest
+```
+
+You can also use docker-compose passing the environment file or using secrets locally
+### Local with environment file
+
+```yml
+version: "3.7"
+
+services:
+  adguard_exporter:
+    image: ebrianne/adguard_exporter:latest
+    restart: always
+    ports:
+      - "9617:9617"
+    env_file:
+      - .env
+```
+### Local with secret file (compose version 3 minimum)
+
+```yml
+version: "3.7"
+
+secrets: 
+  my-adguard-pass:
+    file: ./my-adguard-pass.txt
+
+services:
+  adguard_exporter:
+    image: ebrianne/adguard_exporter:latest
+    restart: always
+    secrets:
+      - my-adguard-pass
+    ports:
+      - "9617:9617"
+    environment:
+      - adguard_protocol=http
+      - adguard_hostname=192.168.10.252
+      - adguard_username=admin
+      - adguard_password=/run/secrets/my-adguard-pass 
+      - interval=10s
+      - log_limit=10000
+```
+### Swarm mode (docker swarm init)
+
+```bash
+echo "mypassword" | docker secret create my-adguard-pass -
+```
+Here is an example of docker-compose file.
+
+```yml
+version: "3.7"
+
+secrets: 
+  my-adguard-pass:
+    external: true
+
+services:
+  adguard_exporter:
+    image: ebrianne/adguard_exporter:latest
+    restart: always
+    secrets:
+      - my-adguard-pass
+    ports:
+      - "9617:9617"
+    environment:
+      - adguard_protocol=http
+      - adguard_hostname=192.168.10.252
+      - adguard_username=admin
+      - adguard_password=/run/secrets/my-adguard-pass 
+      - interval=10s
+      - log_limit=10000
 ```
 
 ## Usage
