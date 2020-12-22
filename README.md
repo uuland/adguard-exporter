@@ -36,6 +36,9 @@ You can download the latest version of the binary built for your architecture he
 * Architecture **arm** [
 [Linux](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-linux-arm)
 ]
+* Architecture **arm64** [
+[Linux](https://github.com/ebrianne/adguard-exporter/releases/latest/download/adguard_exporter-linux-arm64)
+]
 
 ### From sources
 
