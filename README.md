@@ -70,6 +70,7 @@ docker run \
 -e 'adguard_hostname=192.168.10.252' \
 -e 'adguard_username=admin' \
 -e 'adguard_password=mypassword' \
+-e 'adguard_port=' \ #optional if adguard is not using port 80 (http)/443 (https)
 -e 'interval=10s' \
 -e 'log_limit=10000' \
 -e 'server_port=9617' \
@@ -120,7 +121,8 @@ services:
       - adguard_protocol=http
       - adguard_hostname=192.168.10.252
       - adguard_username=admin
-      - adguard_password=/run/secrets/my-adguard-pass 
+      - adguard_password=/run/secrets/my-adguard-pass
+      - adguard_port= #optional
       - interval=10s
       - log_limit=10000
 ```
@@ -150,7 +152,8 @@ services:
       - adguard_protocol=http
       - adguard_hostname=192.168.10.252
       - adguard_username=admin
-      - adguard_password=/run/secrets/my-adguard-pass 
+      - adguard_password=/run/secrets/my-adguard-pass
+      - adguard_port= #optional
       - interval=10s
       - log_limit=10000
 ```
@@ -218,6 +221,9 @@ scrape_configs:
 
 # Password defined on the Adguard interface
 -adguard_password string (optional)
+
+# Port to use to communicate with Adguard API
+-adguard_port string (optional)
 
 # Limit for the return log data
 -log_limit string (optional) (default "1000")
