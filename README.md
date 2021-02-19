@@ -75,14 +75,14 @@ docker run \
 -e 'log_limit=10000' \
 -e 'server_port=9617' \
 -p 9617:9617 \
-ebrianne/adguard_exporter:latest
+ebrianne/adguard-exporter:latest
 ```
 
 If you prefer you can use an .env file where the environment variables are defined and using the command:
 
 ```bash
 docker run --env-file=.env -p 9617:9617 \
-ebrianne/adguard_exporter:latest
+ebrianne/adguard-exporter:latest
 ```
 
 You can also use docker-compose passing the environment file or using secrets locally
@@ -93,7 +93,7 @@ version: "3.7"
 
 services:
   adguard_exporter:
-    image: ebrianne/adguard_exporter:latest
+    image: ebrianne/adguard-exporter:latest
     restart: always
     ports:
       - "9617:9617"
@@ -111,7 +111,7 @@ secrets:
 
 services:
   adguard_exporter:
-    image: ebrianne/adguard_exporter:latest
+    image: ebrianne/adguard-exporter:latest
     restart: always
     secrets:
       - my-adguard-pass
@@ -142,7 +142,7 @@ secrets:
 
 services:
   adguard_exporter:
-    image: ebrianne/adguard_exporter:latest
+    image: ebrianne/adguard-exporter:latest
     restart: always
     secrets:
       - my-adguard-pass
