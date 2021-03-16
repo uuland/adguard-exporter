@@ -15,5 +15,5 @@ jobs:
           recent activity. It will be closed in 5d if no further activity occurs. Thank you for your contributions.'
           days-before-stale: 30
           days-before-close: 5
-          stale-issue-label: 'stale,wontfix'
+          stale-issue-label: 'stale'
           exempt-issue-labels: 'pinned,security,block'
