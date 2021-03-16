@@ -3,6 +3,7 @@
 ![Build/Push (master)](https://github.com/ebrianne/adguard-exporter/workflows/Build/Push%20(master)/badge.svg?branch=master)
 [![GoDoc](https://godoc.org/github.com/ebrianne/adguard-exporter?status.png)](https://godoc.org/github.com/ebrianne/adguard-exporter)
 [![GoReportCard](https://goreportcard.com/badge/github.com/ebrianne/adguard-exporter)](https://goreportcard.com/report/github.com/ebrianne/adguard-exporter)
+![DockerPulls](https://img.shields.io/docker/pulls/ebrianne/adguard-exporter)
 
 This is a Prometheus exporter for [AdguardHome](https://github.com/AdguardTeam/AdguardHome)'s Raspberry PI ad blocker.
 It is based on the famous pihole-exporter [available here](https://github.com/eko/pihole-exporter/)
