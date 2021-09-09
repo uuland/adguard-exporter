@@ -7,6 +7,7 @@ type AllStats struct {
 	status   *Status
 	stats    *Stats
 	logStats *LogStats
+	rdns     map[string]string
 }
 
 // Status struct is the Adguard statistics JSON API corresponding model.

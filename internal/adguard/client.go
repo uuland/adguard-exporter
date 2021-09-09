@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ebrianne/adguard-exporter/internal/metrics"
@@ -15,28 +17,30 @@ import (
 )
 
 var (
-	port               uint16
-	statusURLPattern   = "%s://%s:%d/control/status"
-	statsURLPattern    = "%s://%s:%d/control/stats"
-	logstatsURLPattern = "%s://%s:%d/control/querylog?limit=%s&response_status=\"all\""
-	m                  map[string]int
+	port                  uint16
+	statusURLPattern      = "%s://%s:%d/control/status"
+	statsURLPattern       = "%s://%s:%d/control/stats"
+	logstatsURLPattern    = "%s://%s:%d/control/querylog?limit=%s&response_status=\"all\""
+	resolveRDNSURLPattern = "%s://%s:%d/control/clients/find?%s"
+	m                     map[string]int
 )
 
 // Client struct is a AdGuard  client to request an instance of a AdGuard  ad blocker.
 type Client struct {
-	httpClient http.Client
-	interval   time.Duration
-	logLimit   string
-	protocol   string
-	hostname   string
-	port       uint16
-	username   string
-	password   string
+	httpClient  http.Client
+	interval    time.Duration
+	logLimit    string
+	protocol    string
+	hostname    string
+	port        uint16
+	username    string
+	password    string
+	rdnsenabled bool
 }
 
 // NewClient method initializes a new AdGuard  client.
-func NewClient(protocol, hostname, username, password, adport string, interval time.Duration, logLimit string) *Client {
-	
+func NewClient(protocol, hostname, username, password, adport string, interval time.Duration, logLimit string, rdnsenabled bool) *Client {
+
 	temp, err := strconv.Atoi(adport)
 	if err != nil {
 		log.Fatal(err)
@@ -57,6 +61,7 @@ func NewClient(protocol, hostname, username, password, adport string, interval t
 				return http.ErrUseLastResponse
 			},
 		},
+		rdnsenabled: rdnsenabled,
 	}
 }
 
@@ -67,14 +72,14 @@ func (c *Client) Scrape() {
 
 		allstats := c.getStatistics()
 		//Set the metrics
-		c.setMetrics(allstats.status, allstats.stats, allstats.logStats)
+		c.setMetrics(allstats.status, allstats.stats, allstats.logStats, allstats.rdns)
 
 		log.Printf("New tick of statistics: %s", allstats.stats.ToString())
 	}
 }
 
 // Function to set the prometheus metrics
-func (c *Client) setMetrics(status *Status, stats *Stats, logstats *LogStats) {
+func (c *Client) setMetrics(status *Status, stats *Stats, logstats *LogStats, rdns map[string]string) {
 	//Status
 	var isRunning int = 0
 	if status.Running == true {
@@ -110,7 +115,15 @@ func (c *Client) setMetrics(status *Status, stats *Stats, logstats *LogStats) {
 
 	for l := range stats.TopClients {
 		for source, value := range stats.TopClients[l] {
+			if c.rdnsenabled && isValidIp(source) {
+				hostName, exists := rdns[source]
+				if exists {
+					metrics.TopClients.WithLabelValues(c.hostname, hostName).Set(float64(value))
+					continue
+				}
+			}
 			metrics.TopClients.WithLabelValues(c.hostname, source).Set(float64(value))
+
 		}
 	}
 
@@ -181,6 +194,34 @@ func (c *Client) getStatistics() *AllStats {
 	allstats.stats = &stats
 	allstats.logStats = &logstats
 
+	if c.rdnsenabled {
+		var sb strings.Builder
+		for l := range stats.TopClients {
+			for source, _ := range stats.TopClients[l] {
+				sb.WriteString(fmt.Sprintf("ip%d=%s", l, source))
+				if l < len(stats.TopClients)-1 {
+					sb.WriteString("&")
+				}
+			}
+		}
+		rdnsURL := fmt.Sprintf(resolveRDNSURLPattern, c.protocol, c.hostname, c.port, sb.String())
+		body = c.MakeRequest(rdnsURL)
+		var results []map[string]interface{}
+		err = json.Unmarshal(body, &results)
+		if err != nil {
+			log.Println("Unable to unmarshal Reverse DNS", err)
+		}
+
+		rdnsData := make(map[string]string)
+		for _, result := range results {
+			for key := range result {
+				data := result[key].(map[string]interface{})
+				rdnsData[key] = data["name"].(string)
+			}
+		}
+		allstats.rdns = rdnsData
+	}
+
 	return &allstats
 }
 
@@ -225,5 +266,13 @@ func (c *Client) authenticateRequest(req *http.Request) {
 func GetTlsConfig() *tls.Config {
 	return &tls.Config{
 		InsecureSkipVerify: true,
+	}
+}
+
+func isValidIp(ip string) bool {
+	if net.ParseIP(ip) == nil {
+		return false
+	} else {
+		return true
 	}
 }

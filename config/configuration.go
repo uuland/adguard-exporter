@@ -24,6 +24,7 @@ type Config struct {
 	ServerPort      string        `config:"server_port"`
 	Interval        time.Duration `config:"interval"`
 	LogLimit        string        `config:"log_limit"`
+	RDnsEnabled     bool          `config:"rdns_enabled"`
 }
 
 func getDefaultConfig() *Config {
@@ -36,6 +37,7 @@ func getDefaultConfig() *Config {
 		ServerPort:      "9617",
 		Interval:        10 * time.Second,
 		LogLimit:        "1000",
+		RDnsEnabled:     true,
 	}
 }
 
