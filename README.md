@@ -127,6 +127,7 @@ services:
       - server_port=9617
       - interval=10s
       - log_limit=10000
+      - password_from_file=true
 ```
 ### Swarm mode (docker swarm init)
 
@@ -159,6 +160,7 @@ services:
       - server_port=9617
       - interval=10s
       - log_limit=10000
+      - password_from_file=true
 ```
 
 ## Usage
