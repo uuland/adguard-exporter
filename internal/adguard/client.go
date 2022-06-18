@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/ebrianne/adguard-exporter/internal/metrics"
 	"github.com/mitchellh/mapstructure"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -36,6 +36,13 @@ type Client struct {
 	username    string
 	password    string
 	rdnsenabled bool
+
+	statsTracks map[string]*statsTrack
+}
+
+type statsTrack struct {
+	base int // offset after retention cleanup
+	last int // last stats value
 }
 
 // NewClient method initializes a new AdGuard  client.
@@ -62,39 +69,42 @@ func NewClient(protocol, hostname, username, password, adport string, interval t
 			},
 		},
 		rdnsenabled: rdnsenabled,
+
+		statsTracks: make(map[string]*statsTrack),
 	}
 }
 
 // Scrape method authenticates and retrieves statistics from AdGuard  JSON API
 // and then pass them as Prometheus metrics.
 func (c *Client) Scrape() {
-	for range time.Tick(c.interval) {
+	for ; true; <-time.Tick(c.interval) {
+		begin := time.Now()
 
 		allstats := c.getStatistics()
 		//Set the metrics
 		c.setMetrics(allstats.status, allstats.stats, allstats.logStats, allstats.rdns)
 
-		log.Printf("New tick of statistics: %s", allstats.stats.ToString())
+		log.Debugf("New tick of statistics: %s. (cost %s)", allstats.stats.ToString(), time.Since(begin))
 	}
 }
 
 // Function to set the prometheus metrics
 func (c *Client) setMetrics(status *Status, stats *Stats, logstats *LogStats, rdns map[string]string) {
 	//Status
-	var isRunning int = 0
+	var isRunning = 0
 	if status.Running == true {
 		isRunning = 1
 	}
 	metrics.Running.WithLabelValues(c.hostname).Set(float64(isRunning))
 
-	var isProtected int = 0
+	var isProtected = 0
 	if status.ProtectionEnabled == true {
 		isProtected = 1
 	}
 	metrics.ProtectionEnabled.WithLabelValues(c.hostname).Set(float64(isProtected))
 
 	//Stats
-	metrics.AvgProcessingTime.WithLabelValues(c.hostname).Set(float64(stats.AvgProcessingTime))
+	metrics.AvgProcessingTime.WithLabelValues(c.hostname).Set(stats.AvgProcessingTime)
 	metrics.DnsQueries.WithLabelValues(c.hostname).Set(float64(stats.DnsQueries))
 	metrics.BlockedFiltering.WithLabelValues(c.hostname).Set(float64(stats.BlockedFiltering))
 	metrics.ParentalFiltering.WithLabelValues(c.hostname).Set(float64(stats.ParentalFiltering))
@@ -170,7 +180,7 @@ func (c *Client) getStatistics() *AllStats {
 	body := c.MakeRequest(statusURL)
 	err := json.Unmarshal(body, &status)
 	if err != nil {
-		log.Println("Unable to unmarshal Adguard log statistics to log statistics struct model", err)
+		log.Warnln("Unable to unmarshal Adguard log statistics to log statistics struct model", err)
 	}
 
 	var stats Stats
@@ -178,15 +188,17 @@ func (c *Client) getStatistics() *AllStats {
 	body = c.MakeRequest(statsURL)
 	err = json.Unmarshal(body, &stats)
 	if err != nil {
-		log.Println("Unable to unmarshal Adguard statistics to statistics struct model", err)
+		log.Warnln("Unable to unmarshal Adguard statistics to statistics struct model", err)
 	}
+
+	c.fixStatsRetention(&stats)
 
 	var logstats LogStats
 	logstatsURL := fmt.Sprintf(logstatsURLPattern, c.protocol, c.hostname, c.port, c.logLimit)
 	body = c.MakeRequest(logstatsURL)
 	err = json.Unmarshal(body, &logstats)
 	if err != nil {
-		log.Println("Unable to unmarshal Adguard log statistics to log statistics struct model", err)
+		log.Warnln("Unable to unmarshal Adguard log statistics to log statistics struct model", err)
 	}
 
 	var allstats AllStats
@@ -209,7 +221,7 @@ func (c *Client) getStatistics() *AllStats {
 		var results []map[string]interface{}
 		err = json.Unmarshal(body, &results)
 		if err != nil {
-			log.Println("Unable to unmarshal Reverse DNS", err)
+			log.Warnln("Unable to unmarshal Reverse DNS", err)
 		}
 
 		rdnsData := make(map[string]string)
@@ -223,6 +235,32 @@ func (c *Client) getStatistics() *AllStats {
 	}
 
 	return &allstats
+}
+
+func (c *Client) fixStatsRetention(stats *Stats) {
+	stats.DnsQueries = c.fixStatsValue("q", stats.DnsQueries)
+	stats.BlockedFiltering = c.fixStatsValue("b", stats.BlockedFiltering)
+	stats.ParentalFiltering = c.fixStatsValue("p", stats.ParentalFiltering)
+	stats.SafeBrowsingFiltering = c.fixStatsValue("sb", stats.SafeBrowsingFiltering)
+	stats.SafeSearchFiltering = c.fixStatsValue("ss", stats.SafeSearchFiltering)
+}
+
+func (c *Client) fixStatsValue(key string, val int) int {
+	track, exists := c.statsTracks[key]
+	if !exists {
+		c.statsTracks[key] = &statsTrack{last: val, base: 0}
+		return val
+	}
+
+	if track.last > val {
+		// stats has been rotated
+		track.base = val
+		track.last = 0
+		return 0
+	}
+
+	track.last = val
+	return val - track.base
 }
 
 func (c *Client) MakeRequest(url string) []byte {

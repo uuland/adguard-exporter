@@ -11,6 +11,7 @@ import (
 	"github.com/ebrianne/adguard-exporter/internal/adguard"
 	"github.com/ebrianne/adguard-exporter/internal/metrics"
 	"github.com/ebrianne/adguard-exporter/internal/server"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,6 +25,12 @@ var (
 func main() {
 	conf := config.Load()
 
+	if level, err := log.ParseLevel(conf.LogLevel); err != nil {
+		log.Fatal(err)
+	} else {
+		log.SetLevel(level)
+	}
+
 	metrics.Init()
 
 	initAdguardClient(conf.AdguardProtocol, conf.AdguardHostname, conf.AdguardUsername, conf.AdguardPassword, conf.AdguardPort, conf.Interval, conf.LogLimit, conf.RDnsEnabled)
@@ -32,9 +39,11 @@ func main() {
 	handleExitSignal()
 }
 
-func initAdguardClient(protocol, hostname, username, password, port string, interval time.Duration, logLimit string, rdnsenabled bool) {
-	client := adguard.NewClient(protocol, hostname, username, password, port, interval, logLimit, rdnsenabled)
-	go client.Scrape()
+func initAdguardClient(protocol string, hostnames []string, username, password, port string, interval time.Duration, logLimit string, rdnsenabled bool) {
+	for _, hostname := range hostnames {
+		client := adguard.NewClient(protocol, hostname, username, password, port, interval, logLimit, rdnsenabled)
+		go client.Scrape()
+	}
 }
 
 func initHttpServer(port string) {

@@ -1,11 +1,11 @@
 package server
 
 import (
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -36,8 +36,8 @@ func (s *Server) ListenAndServe() {
 	log.Println("Starting HTTP server")
 
 	err := s.httpServer.ListenAndServe()
-	if err != nil {
-		log.Printf("Failed to start serving HTTP requests: %v", err)
+	if err != nil && err != http.ErrServerClosed {
+		log.Errorf("Failed to start serving HTTP requests: %v", err)
 	}
 }
 
@@ -50,19 +50,19 @@ func (s *Server) Stop() {
 }
 
 func (s *Server) readinessHandler() http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		if s.isReady() {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
-	})
+	}
 }
 
 func (s *Server) livenessHandler() http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	})
+	}
 }
 
 func (s *Server) isReady() bool {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"reflect"
 	"time"
@@ -13,12 +12,14 @@ import (
 	"github.com/heetch/confita/backend"
 	"github.com/heetch/confita/backend/env"
 	"github.com/heetch/confita/backend/flags"
+	log "github.com/sirupsen/logrus"
 )
 
 // Config is the exporter CLI configuration.
 type Config struct {
+	LogLevel         string        `config:"loglevel"`
 	AdguardProtocol  string        `config:"adguard_protocol"`
-	AdguardHostname  string        `config:"adguard_hostname"`
+	AdguardHostname  []string      `config:"adguard_hostname"`
 	AdguardUsername  string        `config:"adguard_username"`
 	AdguardPassword  string        `config:"adguard_password"`
 	AdguardPort      string        `config:"adguard_port"`
@@ -31,8 +32,9 @@ type Config struct {
 
 func getDefaultConfig() *Config {
 	return &Config{
+		LogLevel:         "debug",
 		AdguardProtocol:  "http",
-		AdguardHostname:  "127.0.0.1",
+		AdguardHostname:  []string{"127.0.0.1"},
 		AdguardUsername:  "",
 		AdguardPassword:  "",
 		AdguardPort:      "80",
@@ -56,7 +58,7 @@ func Load() *Config {
 	cfg := getDefaultConfig()
 	err := loader.Load(context.Background(), cfg)
 	if err != nil {
-		log.Printf("Could not load the configuration...")
+		log.Errorf("Could not load the configuration...")
 		os.Exit(1)
 	}
 
@@ -67,7 +69,7 @@ func Load() *Config {
 		} else if cfg.AdguardProtocol == "https" {
 			cfg.AdguardPort = "443"
 		} else {
-			log.Printf("protocol %s is invalid. Must be http or https.", cfg.AdguardProtocol)
+			log.Errorf("protocol %s is invalid. Must be http or https.", cfg.AdguardProtocol)
 			os.Exit(1)
 		}
 	}
@@ -76,7 +78,7 @@ func Load() *Config {
 	if cfg.PasswordFromFile {
 		secret, err := ioutil.ReadFile(cfg.AdguardPassword)
 		if err != nil {
-			log.Printf("unable to read AdguardPassword from %s due to %s", cfg.AdguardPassword, err)
+			log.Errorf("unable to read AdguardPassword from %s due to %s", cfg.AdguardPassword, err)
 			os.Exit(1)
 		}
 
