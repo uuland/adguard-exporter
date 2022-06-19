@@ -248,14 +248,13 @@ func (c *Client) fixStatsRetention(stats *Stats) {
 func (c *Client) fixStatsValue(key string, val int) int {
 	track, exists := c.statsTracks[key]
 	if !exists {
-		c.statsTracks[key] = &statsTrack{last: val, base: 0}
-		return val
+		c.statsTracks[key] = &statsTrack{base: val, last: val}
+		return 0
 	}
 
 	if track.last > val {
 		// stats has been rotated
-		track.base = val
-		track.last = 0
+		track.base, track.last = val, 0
 		return 0
 	}
 
